@@ -1,6 +1,8 @@
 steps how can you just use it and at how much level it is working
 
 
+follow steps:
+
 clone this repo
 
 add your credentials in .env file
