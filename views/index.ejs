@@ -9,14 +9,14 @@
 </head>
 
 <body>
-    <div id="spinner" class="spinner"></div>
     <div class="container">
         <div class="search-container">
             <input type="text" id="searchInput" placeholder="Search..." autocomplete="off">
+            <div id="searchMessage"></div>
         </div>
         <div class="table-container">
+            <div id="spinner" class="spinner" style="display: none;"></div>
             <table id="dataTable">
-                <!-- Table header will be dynamically generated -->
                 <thead>
                     <tr>
                         <th>#</th>
@@ -24,29 +24,29 @@
                         <th>Country</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <!-- Table data will be dynamically generated -->
-                    <% if (data && data.length> 0) { %>
-                        <% data.forEach((item, index)=> { %>
-                            <tr>
-                                <td>
-                                    <%= index + 1 %>
-                                </td>
-                                <td>
-                                    <%= item.name %>
-                                </td>
-                                <td><img src="https://www.countryflags.io/<%= item.countryCode %>/flat/64.png"
-                                        alt="<%= item.country %>"></td>
-                            </tr>
-                            <% }); %>
-                                <% } else { %>
-                                    <tr>
-                                        <td colspan="3">
-                                            <%= message %>
-                                        </td>
-                                    </tr>
+                <tbody id="tableBody">
+                    <!-- Check if data is available -->
+                    <% if (searchInteraction && (!data || data.length===0)) { %>
+                        <tr>
+                            <td colspan="3">No Data Found</td>
+                        </tr>
+                        <% } else if (data && data.length> 0) { %>
+                            <!-- Render table rows for each item in the data -->
+                            <% data.slice(0, 3).forEach((item, index)=> { %>
+                                <tr>
+                                    <td>
+                                        <%= index + 1 %>
+                                    </td>
+                                    <td>
+                                        <%= item.name %>
+                                    </td>
+                                    <td><img src="https://www.countryflags.io/<%= item.countryCode %>/flat/64.png"
+                                            alt="<%= item.country %>"></td>
+                                </tr>
+                                <% }); %>
                                     <% } %>
                 </tbody>
+
             </table>
         </div>
         <div class="pagination-container">
@@ -60,43 +60,102 @@
             <input type="number" id="limitInput" min="1" max="10" value="5">
         </div>
     </div>
-
     <script>
-        function fetchDataWithQueryAndLimit() {
-            const query = document.getElementById('searchInput').value.trim();
-            const limit = document.getElementById('limitInput').value.trim();
+        let searchInteraction = false;
+        const searchInput = document.getElementById('searchInput');
 
-            // Make an AJAX request to the server-side endpoint with both query and limit
-            fetch(`/search?q=${query}&limit=${limit}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.text(); // Read response as text
-                })
-                .then(htmlContent => {
-                    // Update the table container with the received HTML content
-                    const tableContainer = document.querySelector('.table-container');
-                    tableContainer.innerHTML = htmlContent;
-                })
-                .catch(error => {
-                    // Handle errors
-                    console.error('Error:', error);
-                });
-        }
+        const spinner = document.getElementById('spinner');
 
-        // Event listener for input change in the search box
-        document.getElementById('searchInput').addEventListener('input', fetchDataWithQueryAndLimit);
+        // Initialize spinner to display none
+        spinner.style.display = 'none';
+        const tableBody = document.getElementById('tableBody');
 
-        // Event listener for pressing Enter key in the search box
-        document.getElementById('searchInput').addEventListener('keypress', function (event) {
-            if (event.key === 'Enter') {
-                fetchDataWithQueryAndLimit();
+        // Event listener for input focus
+        searchInput.addEventListener('focus', function () {
+            searchInteraction = true;
+            if (searchInput.value === '') {
+                renderMessageRow('Start searching');
             }
         });
 
-        // Event listener for input change in the limit input field
-        document.getElementById('limitInput').addEventListener('input', fetchDataWithQueryAndLimit);
+        // Event listener for input blur (when losing focus)
+        searchInput.addEventListener('blur', function () {
+            // Clear the table body when the input loses focus
+            tableBody.innerHTML = '';
+            // Check if the input is empty, if not, do not display the "Start searching" message
+            searchInteraction = false;
+            if (searchInput.value === '') {
+                renderMessageRow('',false); // Clear the message
+            }
+        });
+
+        // Event listener for input change
+        searchInput.addEventListener('input', function () {
+            searchInteraction = true;
+            if (searchInput.value === '') {
+                renderMessageRow('Start searching',true);
+            } else {
+                renderMessageRow('Start typing',true);
+            }
+        });
+
+        // Event listener for pressing Enter key
+        searchInput.addEventListener('keypress', async function (event) {
+            if (event.key === 'Enter') {
+                searchInteraction = true;
+                spinner.style.display = 'block';
+                const query = searchInput.value.trim();
+                const limit = 5; // Set your limit here
+
+                try {
+                    // Make AJAX request
+                    const response = await fetch(`/search?q=${query}&limit=${limit}`);
+                    if (!response.ok) {
+                        console.error('Network response was not ok');
+                        renderMessageRow('Internal server error',true);
+                        return;
+                    }
+
+                    const data = await response.json();
+                    if (!data || !data.data || !data.data.length) {
+                        renderMessageRow('No result found',true);
+                    } else {
+                        // Render the data
+                        renderDataRows(data.data);
+                    }
+
+                } catch (error) {
+                    renderMessageRow('Internal server error');
+                }
+                finally {
+                    // Hide spinner
+                    spinner.style.display = 'none';
+                }
+            }
+        });
+
+        function renderMessageRow(message,option) {
+            if(option){
+                 tableBody.innerHTML = `<tr><td colspan="3">${message}</td></tr>`;
+            }
+            // tableBody.innerHTML = '';
+        }
+
+        function renderDataRows(data) {
+            // Clear previous message row
+            tableBody.innerHTML = '';
+
+            // Render data rows
+            data.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${item.name}</td>
+            <td><img src="https://www.countryflags.io/${item.countryCode}/flat/64.png" alt="${item.country}"></td>
+        `;
+                tableBody.appendChild(row);
+            });
+        }
 
     </script>
 

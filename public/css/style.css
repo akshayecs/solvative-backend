@@ -43,6 +43,7 @@ body {
 
 .table-container {
     margin-bottom: 20px;
+    position: relative; /* Ensure the container is positioned relatively */
 }
 
 #dataTable {
@@ -50,10 +51,20 @@ body {
     border-collapse: collapse;
 }
 
+/* Set padding for td/th */
 #dataTable th,
 #dataTable td {
     padding: 8px;
+}
+
+#dataTable th,
+#dataTable td {
     border: 1px solid rgb(222, 226, 230);
+}
+
+/* Set font-weight for table header */
+#dataTable th {
+    font-weight: 700;
 }
 
 .pagination-container {
@@ -78,18 +89,16 @@ body {
 }
 
 .spinner {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-top: 4px solid #333;
+    position: absolute; /* Position relative to the table container */
+    top: 50%; /* Position at vertical center of the table container */
+    left: 50%; /* Position at horizontal center of the table container */
+    transform: translate(-50%, -50%); /* Center the spinner */
+    width: 50px;
+    height: 50px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
     animation: spin 1s linear infinite;
-    z-index: 1000; /* Ensure the spinner is on top of the table */
-    display: none; /* Initially hidden */
 }
 
 @keyframes spin {
